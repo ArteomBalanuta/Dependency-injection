@@ -6,13 +6,9 @@ import ab.annotation.DependencyInjectionEntryPoint;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.lang.reflect.*;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.List;
+import java.util.*;
 
 //https://stackoverflow.com/questions/520328/can-you-find-all-classes-in-a-package-using-reflection
 
@@ -31,14 +27,14 @@ public class Context {
         return entryPoint;
     }
 
-    public Context(String projectPath) throws IOException, ClassNotFoundException, IllegalAccessException, InvocationTargetException, InstantiationException {
+    public Context(String projectPath, Class<?> entryPointClass) throws IOException, ClassNotFoundException, IllegalAccessException, InvocationTargetException, InstantiationException {
         this.container = new Container();
 
         Class[] classes = getClasses(projectPath);
 
-        setEntryPoint(classes);
         setBeanFactory(classes);
-        setAutowired(classes);
+        injectIntoConstructors(classes, entryPointClass);
+        injectIntoFields(classes, entryPointClass);
     }
 
 
@@ -93,20 +89,33 @@ public class Context {
         return classes;
     }
 
-    //setEntryPoint
-
-    private void setEntryPoint(Class[] classes) throws IllegalAccessException, InstantiationException, InvocationTargetException {
+    private void injectIntoConstructors(Class[] classes, Class<?> entryPointClass) throws IllegalAccessException, InstantiationException, InvocationTargetException {
         boolean isPresent = false;
         for (Class<?> clazz : classes) {
+            if(entryPointClass != null){
+                clazz = entryPointClass;
+            }
+
             if (clazz.isAnnotationPresent(DependencyInjectionEntryPoint.class)) {
-                entryPoint = clazz.getConstructors()[0].newInstance();
-                isPresent = true;
-                System.out.println("Entry point set");
+                Constructor c = clazz.getConstructors()[0];
+                if (!c.isAnnotationPresent(AutoWired.class)) {
+                    entryPoint = c.newInstance();
+                    isPresent = true;
+                    System.out.println("Instance of " + clazz.getName() + " created - constructor's parameters ARE NOT autowired");
+                    return;
+                }
+                List<Object> beans = new ArrayList<>();
+                for (Class<?> typeClass : c.getParameterTypes()) {
+                    beans.add(getBeanFromBeanFactory(typeClass));
+                }
+                entryPoint = c.newInstance(beans.toArray());
+                System.out.println("Instance of " + clazz.getName() + " created - constructor's parameters ARE autowired");
+                return;
             }
         }
 
         if (!isPresent) {
-            throw new RuntimeException("Can not find class with entry point annotation @DIEP");
+            throw new RuntimeException("Can not find class with entry point annotation @DependencyInjectionEntryPoint");
         }
     }
 
@@ -128,7 +137,7 @@ public class Context {
 
     //TODO: implement constructor injection instead of field injection
     //TODO: extend autowiring - to use outside entry point class
-    private void setAutowired(Class[] classes) throws IllegalAccessException, InvocationTargetException {
+    private void injectIntoFields(Class[] classes) throws IllegalAccessException, InvocationTargetException {
         for (Class<?> clazz : classes) {
             Field[] fields = clazz.getDeclaredFields();
             for (Field f : fields) {

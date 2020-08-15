@@ -1,5 +1,7 @@
 package ab;
 
+import ab.annotation.DependencyInjectionEntryPoint;
+
 public class Test {
     private String id;
 

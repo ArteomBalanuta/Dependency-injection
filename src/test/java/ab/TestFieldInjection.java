@@ -1,7 +1,5 @@
 package ab;
 
-import ab.annotation.AutoWired;
-import ab.annotation.DependencyInjectionEntryPoint;
 import ab.di.Context;
 import org.junit.Before;
 import org.junit.Test;
@@ -11,21 +9,13 @@ import java.lang.reflect.InvocationTargetException;
 
 import static org.junit.Assert.*;
 
-@DependencyInjectionEntryPoint
-public class AppTest {
+public class TestFieldInjection {
     private static final String packageName = "ab";
     private Context context;
 
-    public ab.Test getInjectedField() {
-        return injectedField;
-    }
-
-    @AutoWired
-    public ab.Test injectedField;
-
     @Before
     public void setUp() throws ClassNotFoundException, InvocationTargetException, InstantiationException, IllegalAccessException, IOException {
-        context = new Context(packageName);
+        context = new Context(packageName, Class.forName("ab.ServiceFieldInjection"));
     }
 
     @Test
@@ -34,7 +24,7 @@ public class AppTest {
         String expected = ((BeanFactoryImpl) context.getFactoryInstance()).getTest().toString();
 
         //act
-        String actual = ((AppTest) context.getEntryPoint()).getInjectedField().toString();
+        String actual = ((ServiceFieldInjection) context.getEntryPoint()).getTestField().toString();
 
         //assert
         assertEquals(expected, actual);
