@@ -133,19 +133,15 @@ public class Context {
     }
 
     private void setBeanFactory(Class[] classes) throws IllegalAccessException, InstantiationException, InvocationTargetException {
-        boolean isPresent = false;
         for (Class<?> clazz : classes) {
             if (clazz.isAnnotationPresent(BeanFactory.class)) {
                 factory = clazz;
                 factoryInstance = clazz.getConstructors()[0].newInstance();
-                isPresent = true;
                 System.out.println("Found BeanFactory");
+                return;
             }
         }
-
-        if (!isPresent) {
-            throw new RuntimeException("Can not find BeanFactoryClass");
-        }
+        throw new RuntimeException("Can not find BeanFactoryClass");
     }
 
     private void injectIntoFields(Class[] classes) throws IllegalAccessException, InvocationTargetException, InstantiationException {
