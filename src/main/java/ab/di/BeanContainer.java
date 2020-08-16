@@ -5,7 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 //TODO make di persist beans as singletones
-public class Container {
+public class BeanContainer {
     Map<String, Object> container = new HashMap<>();
 
     public void add(String name, Object value) {

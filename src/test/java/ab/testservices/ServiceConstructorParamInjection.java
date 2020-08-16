@@ -1,5 +1,6 @@
-package ab;
+package ab.testservices;
 
+import ab.Test;
 import ab.annotation.AutoWired;
 import ab.annotation.DependencyInjectionEntryPoint;
 

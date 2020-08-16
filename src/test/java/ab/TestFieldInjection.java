@@ -1,21 +1,27 @@
 package ab;
 
 import ab.di.Context;
+import ab.di.ContextConfig;
+import ab.testservices.ServiceFieldInjection;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class TestFieldInjection {
-    private static final String packageName = "ab";
+    private static final String PACKAGE_NAME = "ab";
+    private static final boolean IS_FIELD_INJECT = true;
+    private static final boolean IS_CONSTRUCTOR_INJECT = false;
+    private ContextConfig contextConfig;
     private Context context;
 
     @Before
     public void setUp() throws ClassNotFoundException, InvocationTargetException, InstantiationException, IllegalAccessException, IOException {
-        context = new Context(packageName, Class.forName("ab.ServiceFieldInjection"));
+        contextConfig = new ContextConfig(IS_FIELD_INJECT, IS_CONSTRUCTOR_INJECT, PACKAGE_NAME);
+        context = new Context(contextConfig);
     }
 
     @Test

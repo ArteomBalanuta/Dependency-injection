@@ -1,5 +1,6 @@
-package ab;
+package ab.testservices;
 
+import ab.Test;
 import ab.annotation.AutoWired;
 import ab.annotation.DependencyInjectionEntryPoint;
 
@@ -7,7 +8,7 @@ import ab.annotation.DependencyInjectionEntryPoint;
 public class ServiceFieldInjection {
 
     @AutoWired
-    public ab.Test testField;
+    public Test testField;
 
     public Test getTestField() {
         return testField;
