@@ -1,6 +1,4 @@
-package ab;
-
-import ab.annotation.DependencyInjectionEntryPoint;
+package ab.test.model;
 
 public class Test {
     private String id;

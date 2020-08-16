@@ -17,6 +17,8 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static java.util.stream.Collectors.toList;
+
 //https://stackoverflow.com/questions/520328/can-you-find-all-classes-in-a-package-using-reflection
 
 //TODO use container to store created beans
@@ -25,14 +27,13 @@ public class Context {
     private BeanContainer beanContainer;
     private Class<?> factory;
     private Object factoryInstance;
-    private Object entryPoint;
 
     public Object getFactoryInstance() {
         return factoryInstance;
     }
 
-    public Object getEntryPoint() {
-        return entryPoint;
+    public Object getBean(String beanName) {
+        return beanContainer.get(beanName);
     }
 
     public Context(ContextConfig contextConfig) throws IOException, ClassNotFoundException, IllegalAccessException, InvocationTargetException, InstantiationException {
@@ -43,7 +44,7 @@ public class Context {
 
         List<Class> diAnnotated = Arrays.stream(classes)
                 .filter(c -> c.isAnnotationPresent(DependencyInjectionEntryPoint.class))
-                .collect(Collectors.toList());
+                .collect(toList());
 
         if (contextConfig.isConstructorInject) {
             injectIntoConstructors(diAnnotated.toArray(new Class[0]));
@@ -53,7 +54,6 @@ public class Context {
         }
 
     }
-
 
     /**
      * Scans all classes accessible from the context class loader which belong to the given package and subpackages.
@@ -110,8 +110,10 @@ public class Context {
     private void injectIntoConstructors(Class[] classes) throws IllegalAccessException, InstantiationException, InvocationTargetException {
         for (Class<?> clazz : classes) {
             Constructor c = clazz.getConstructors()[0];
+            Object diBean = null;
             if (!c.isAnnotationPresent(AutoWired.class)) {
-                entryPoint = c.newInstance();
+                diBean = c.newInstance();
+                beanContainer.add(clazz.getName(), diBean);
                 System.out.println("Instance of " + clazz.getName() + " created - constructor's parameters ARE NOT autowired");
                 return;
             }
@@ -122,7 +124,8 @@ public class Context {
                 beanContainer.add(bean.getClass().getName(), bean);
             }
 
-            entryPoint = c.newInstance(constructorBeans.toArray());
+            diBean = c.newInstance(constructorBeans.toArray());
+            beanContainer.add(clazz.getName(), diBean);
             System.out.println("Instance of " + clazz.getName() + " created - constructor's parameters ARE autowired");
             return;
         }
@@ -149,27 +152,34 @@ public class Context {
     //TODO: implement constructor injection instead of field injection
     //TODO: extend autowiring - to use outside entry point class
     private void injectIntoFields(Class[] classes) throws IllegalAccessException, InvocationTargetException, InstantiationException {
-        for (Class<?> clazz : classes) {
-            Field[] fields = clazz.getDeclaredFields();
-            for (Field f : fields) {
-                if (f.isAnnotationPresent(AutoWired.class)) {
-                    Constructor c = clazz.getConstructors()[0];
-                    entryPoint = c.newInstance();
-                    Class<?> beanType = f.getType();
+        List fieldInjectionClasses = Arrays.stream(classes)
+                .filter(c -> Arrays.stream(c.getFields())
+                        .anyMatch(f -> f.isAnnotationPresent(AutoWired.class)))
+                .collect(toList());
 
-                    Object bean = getBeanFromBeanFactory(beanType);
-                    f.set(entryPoint, bean);
-                }
+        //TODO: make sure this cast can not fail
+        for (Object aClass : fieldInjectionClasses) {
+            Class<?> fieldInjectionClass = (Class<?>) aClass;
+            Constructor c = fieldInjectionClass.getConstructors()[0];
+            Object diBean = c.newInstance();
+
+            for (Field f : fieldInjectionClass.getDeclaredFields()) {
+                f.set(diBean, getBeanFromBeanFactory(f.getType()));
             }
+            beanContainer.add(fieldInjectionClass.getName(), diBean);
         }
     }
 
-    private Object getBeanFromBeanFactory(Class<?> beanType) throws InvocationTargetException, IllegalAccessException {
+    private Object getBeanFromBeanFactory(Class<?> beanType) {
         Method[] beanFactories = factory.getMethods();
         Object bean = null;
         for (Method m : beanFactories) {
             if (m.getReturnType() == beanType) {
-                return m.invoke(factoryInstance);
+                try {
+                    return m.invoke(factoryInstance);
+                } catch (IllegalAccessException | InvocationTargetException e) {
+                    e.printStackTrace();
+                }
             }
         }
         System.out.println("No beanFactory found for bean: " + beanType);

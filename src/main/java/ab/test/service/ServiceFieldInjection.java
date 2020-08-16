@@ -1,8 +1,8 @@
-package ab.testservices;
+package ab.test.service;
 
-import ab.Test;
 import ab.annotation.AutoWired;
 import ab.annotation.DependencyInjectionEntryPoint;
+import ab.test.model.Test;
 
 @DependencyInjectionEntryPoint
 public class ServiceFieldInjection {

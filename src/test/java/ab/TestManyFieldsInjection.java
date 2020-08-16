@@ -3,9 +3,9 @@ package ab;
 import ab.di.Context;
 import ab.di.ContextConfig;
 import ab.test.BeanFactoryImpl;
-import ab.test.service.ServiceFieldInjection;
+import ab.test.service.ServiceManyFieldsInjection;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 import java.io.IOException;
@@ -14,7 +14,7 @@ import java.lang.reflect.InvocationTargetException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class TestFieldInjection {
+public class TestManyFieldsInjection {
     private static final String PACKAGE_NAME = "ab";
     private static final boolean IS_FIELD_INJECT = true;
     private static final boolean IS_CONSTRUCTOR_INJECT = false;
@@ -27,15 +27,20 @@ public class TestFieldInjection {
         context = new Context(contextConfig);
     }
 
-    @Test
+    @org.junit.jupiter.api.Test
     public void givenContextWithFactory_whenAnnotated_expectedInstanceFromFactory() {
         //arrange
-        String expected = ((BeanFactoryImpl) context.getFactoryInstance()).getTest().toString();
+        String expectedTest = ((BeanFactoryImpl) context.getFactoryInstance()).getTest().toString();
+        String expectedTestSecond = ((BeanFactoryImpl) context.getFactoryInstance()).getTestSecond().toString();
 
         //act
-        String actual = ((ServiceFieldInjection) context.getBean("ab.test.service.ServiceFieldInjection")).getTestField().toString();
+        String actualTest = ((ServiceManyFieldsInjection)
+                context.getBean("ab.test.service.ServiceManyFieldsInjection")).getTestField().toString();
+        String actualTestSecond = ((ServiceManyFieldsInjection)
+                context.getBean("ab.test.service.ServiceManyFieldsInjection")).getTestSecond().toString();
 
         //assert
-        assertEquals(expected, actual);
+        Assertions.assertAll(() -> assertEquals(expectedTest, actualTest),
+                             () -> assertEquals(expectedTestSecond, actualTestSecond));
     }
 }
