@@ -15,13 +15,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
 
 //https://stackoverflow.com/questions/520328/can-you-find-all-classes-in-a-package-using-reflection
 
-//TODO use container to store created beans
+//TODO Add step logs
 public class Context {
     private ContextConfig contextConfig;
     private BeanContainer beanContainer;
@@ -46,6 +45,9 @@ public class Context {
                 .filter(c -> c.isAnnotationPresent(DependencyInjectionEntryPoint.class))
                 .collect(toList());
 
+        if(diAnnotated.isEmpty()){
+            throw new RuntimeException("Can not find class with entry point annotation @DependencyInjectionEntryPoint");
+        }
         if (contextConfig.isConstructorInject) {
             injectIntoConstructors(diAnnotated.toArray(new Class[0]));
         }
@@ -106,16 +108,16 @@ public class Context {
         return classes;
     }
 
-    //TODO: persist EPs
     private void injectIntoConstructors(Class[] classes) throws IllegalAccessException, InstantiationException, InvocationTargetException {
+
         for (Class<?> clazz : classes) {
             Constructor c = clazz.getConstructors()[0];
-            Object diBean = null;
+            Object diBean;
             if (!c.isAnnotationPresent(AutoWired.class)) {
                 diBean = c.newInstance();
                 beanContainer.add(clazz.getName(), diBean);
                 System.out.println("Instance of " + clazz.getName() + " created - constructor's parameters ARE NOT autowired");
-                return;
+                continue;
             }
             List<Object> constructorBeans = new ArrayList<>();
             for (Class<?> typeClass : c.getParameterTypes()) {
@@ -127,10 +129,7 @@ public class Context {
             diBean = c.newInstance(constructorBeans.toArray());
             beanContainer.add(clazz.getName(), diBean);
             System.out.println("Instance of " + clazz.getName() + " created - constructor's parameters ARE autowired");
-            return;
         }
-
-        throw new RuntimeException("Can not find class with entry point annotation @DependencyInjectionEntryPoint");
     }
 
     private void setBeanFactory(Class[] classes) throws IllegalAccessException, InstantiationException, InvocationTargetException {
@@ -149,8 +148,6 @@ public class Context {
         }
     }
 
-    //TODO: implement constructor injection instead of field injection
-    //TODO: extend autowiring - to use outside entry point class
     private void injectIntoFields(Class[] classes) throws IllegalAccessException, InvocationTargetException, InstantiationException {
         List fieldInjectionClasses = Arrays.stream(classes)
                 .filter(c -> Arrays.stream(c.getFields())
